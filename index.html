@@ -5,49 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Grist Widgets</title>
     <link href='https://fonts.googleapis.com/css?family=Open Sans' rel='stylesheet'>
-    <style>
-        body {
-            font-family: 'Open Sans',Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f9f9f9;
-        }
-        header {
-            background-color: #4CAF50;
-            color: white;
-            padding: 1rem;
-            text-align: center;
-        }
-        main {
-            padding: 2rem;
-            text-align: center;
-        }
-        footer {
-            background-color: #333;
-            color: white;
-            text-align: center;
-            padding: 1rem;
-            position: fixed;
-            bottom: 0;
-            width: 100%;
-        }
-        a {
-            color: #4CAF50;
-            text-decoration: none;
-        }
-    </style>
+    <link rel='stylesheet' href='styles.css'>
 </head>
 <body>
     <header>
         <h1>Welcome to Grist Widgets</h1>
+        <subtitle>Built by <a href="https://button.is">button.is</a></subtitle>
     </header>
     <main>
-        <p>Explore our collection of widgets designed to enhance your Grist experience.</p>
-        <p>Visit <a href="https://www.getgrist.com" target="_blank">Grist</a> for more information.</p>
-        <ul>
-            <li><a href="export-to-excel/index.html">Export to Excel</a></li>
-            <li>more to come</li>
-        </ul>
+        <div class="intro">
+            <p>Explore our collection of widgets designed to enhance your Grist experience.</p>
+            <p>Visit <a href="https://www.getgrist.com" target="_blank">Grist</a> for more information.</p>
+        </div>
+        <div class="widgets">
+            <h2>Available Widgets</h2>
+            <ul>
+                <li><a href="export-to-excel/index.html">Export to Excel</a></li>
+                <li>more to come</li>
+            </ul>
+        </div>
     </main>
 </body>
 </html>
