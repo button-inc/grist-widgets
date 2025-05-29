@@ -59,7 +59,7 @@
     // 6. Build and download a CSV
 function doExportCSV() {
   const cols = (mappings.exportCols || []).filter(c => c !== 'id');
-  const header = cols;
+  const header = cols.map(c => c.replace(/_/g,' '));
   const rows = allRecords.map(r => cols.map(c => formatValue(r[c])));
   const csv = [header, ...rows]
     .map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(','))
@@ -75,15 +75,22 @@ function doExportCSV() {
       a.click();
     }
 
-    // 7. Build and download an Excel file
-    function doExportXLSX() {
+// 7. Build and download an Excel file
+function doExportXLSX() {
   const cols = (mappings.exportCols || []).filter(c => c !== 'id');
   const data = allRecords.map(r => {
     const obj = {};
     cols.forEach(c => obj[c] = formatValue(r[c]));
     return obj;
   });
-  const ws = XLSX.utils.json_to_sheet(data, { header: cols, raw: true });
+  const ws = XLSX.utils.json_to_sheet(data, {
+    header: cols,
+    skipHeader: true,
+    raw: true
+  });
+  // Build header row, replacing underscores with spaces
+  const headerLabels = cols.map(c => c.replace(/_/g, ' '));
+  XLSX.utils.sheet_add_aoa(ws, [headerLabels], { origin: 'A1' });
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
       const names = mappings.filenameCols || [];
