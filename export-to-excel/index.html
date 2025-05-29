@@ -10,8 +10,6 @@
   <style>
     body { font-family: sans-serif; padding: 1em; }
     button { margin-right: .5em; padding: .5em 1em; }
-    #error { color: red; margin-top: .5em; display: none; }
-    table { display: none; }
   </style>
 </head>
 <body>
@@ -19,106 +17,85 @@
   <!-- 3. Widget UI -->
   <button id="btnCsv">Export CSV</button>
   <button id="btnXlsx">Export Excel</button>
-  <div id="error"></div>
 
   <script>
+    // 4. Tell Grist we need full document access
+    //    and two multi-column mappings:
+    //    - exportCols → “Columns to export”
+    //    - filenameCols → “Columns for filename”
     grist.ready({
       requiredAccess: 'full',
       columns: [
-        { name: 'exportCols',   title: 'Columns to export',   allowMultiple: true },
+        { name: 'exportCols', title: 'Columns to export', allowMultiple: true },
         { name: 'filenameCols', title: 'Columns for filename', allowMultiple: true }
-      ],
-      onEditOptions: () => {}
+      ]
     });
 
+    // State holders
     let allRecords = [];
-    let mappings  = {};
+    let mappings = {};
 
+    // 5. Keep data in sync
     grist.onRecords((records, map) => {
-      allRecords = records || [];
-      mappings   = map || {};
+      allRecords = records;
+      mappings = map;
     });
 
     function formatValue(val) {
       if (val == null) { return ''; }
+     // ISO string (“2024-07-01T00:00:00.000Z” → “2024-07-01”)
       if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(val)) {
-        return val.slice(0,10);
+        return val.slice(0, 10);
       }
-      if (typeof val === 'number' && val > 8.64e15) {
-        return new Date(val).toISOString().slice(0,10);
+      // epoch milliseconds → date string
+      if (typeof val === 'number' && val > 8.64e15) { 
+      // just in case someone gives ms since 1970
+        let d = new Date(val);
+        return d.toISOString().slice(0, 10);
       }
       return val;
     }
 
-    function doExportCSV() {
-      const cols = (mappings.exportCols||[]).filter(c => c!=='id');
-      if (!cols.length) {
-        const e = document.getElementById('error');
-        e.textContent = "Select columns first.";
-        e.style.display = 'block';
-        return;
-      }
-      document.getElementById('error').style.display = 'none';
-
-      // build header labels by replacing underscores with spaces
-      const headerLabels = cols.map(c => c.replace(/_/g,' '));
-
-      // build rows array-of-arrays
-      const rows = allRecords.map(r => cols.map(c => formatValue(r[c])));
-
-      // CSV text
-      const csv = [headerLabels, ...rows]
-        .map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(','))
-        .join('\r\n');
-
-      // filename from first record
-      const names = mappings.filenameCols||[];
-      const first = allRecords[0]||{};
-      const base  = names.map(c=>first[c]).filter(v=>v).join(' ') || 'export';
-
-      const blob = new Blob([csv], {type:'text/csv'});
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href     = url;
+    // 6. Build and download a CSV
+function doExportCSV() {
+  const cols = (mappings.exportCols || []).filter(c => c !== 'id');
+  const header = cols;
+  const rows = allRecords.map(r => cols.map(c => formatValue(r[c])));
+  const csv = [header, ...rows]
+    .map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(','))
+    .join('\r\n');
+      // Filename from first record of each filenameCol
+      const names = mappings.filenameCols || [];
+      const first = allRecords[0] || {};
+      const base = names.map(c => first[c]).join(' ') || 'export';
+      const blob = new Blob([csv], {type: 'text/csv'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
       a.download = `${base}.csv`;
       a.click();
-      URL.revokeObjectURL(url);
     }
 
+    // 7. Build and download an Excel file
     function doExportXLSX() {
-      const cols = (mappings.exportCols||[]).filter(c => c!=='id');
-      if (!cols.length) {
-        const e = document.getElementById('error');
-        e.textContent = "Select columns first.";
-        e.style.display = 'block';
-        return;
-      }
-      document.getElementById('error').style.display = 'none';
-
-      // header labels with spaces
-      const headerLabels = cols.map(c => c.replace(/_/g,' '));
-
-      // build array-of-arrays: first row headers, then data rows
-      const rows = allRecords.map(r => cols.map(c => formatValue(r[c])));
-      const aoa  = [headerLabels, ...rows];
-
-      // create sheet & workbook
-      const ws = XLSX.utils.aoa_to_sheet(aoa);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Export');
-
-      // filename from first record
-      const names = mappings.filenameCols||[];
-      const first = allRecords[0]||{};
-      const base  = names.map(c=>first[c]).filter(v=>v).join(' ') || 'export';
-
+  const cols = (mappings.exportCols || []).filter(c => c !== 'id');
+  const data = allRecords.map(r => {
+    const obj = {};
+    cols.forEach(c => obj[c] = formatValue(r[c]));
+    return obj;
+  });
+  const ws = XLSX.utils.json_to_sheet(data, { header: cols, raw: true });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+      const names = mappings.filenameCols || [];
+      const first = allRecords[0] || {};
+      const base = names.map(c => first[c]).join(' ') || 'export';
       XLSX.writeFile(wb, `${base}.xlsx`);
     }
 
-    document.getElementById('btnCsv')
-      .addEventListener('click', doExportCSV);
-    document.getElementById('btnXlsx')
-      .addEventListener('click', doExportXLSX);
+    // 8. Wire up buttons
+    document.getElementById('btnCsv').addEventListener('click', doExportCSV);
+    document.getElementById('btnXlsx').addEventListener('click', doExportXLSX);
   </script>
+
 </body>
 </html>
