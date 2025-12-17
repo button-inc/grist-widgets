@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@mui/material@latest/umd/material-ui.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" />
+</head>
+<body style="margin: 0; overflow-x: auto;">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { 
+      Table, TableBody, TableCell, TableContainer, 
+      TableHead, TableRow, Paper, Typography 
+    } = MaterialUI;
+
+    function CustomTableApp() {
+      const [records, setRecords] = React.useState([]);
+      const [columns, setColumns] = React.useState([]);
+
+      React.useEffect(() => {
+        // 1. Initialize Grist
+        grist.ready({
+          requiredAccess: 'full',
+          columns: [
+            // Using 'allowMultiple' lets the user pick N columns in the UI
+            { name: "SelectedColumns", title: "Columns to Display", allowMultiple: true }
+          ]
+        });
+
+        // 2. Map records and column names
+        grist.onRecords((data, mappings) => {
+          // 'mappings' tells us which internal keys correspond to actual table headers
+          const mappedColumns = mappings?.SelectedColumns || [];
+          setColumns(mappedColumns);
+          setRecords(data);
+        });
+      }, []);
+
+      if (columns.length === 0) {
+        return (
+          <div style={{ padding: '20px' }}>
+            <Typography variant="body1">Please map columns in the Creator Panel.</Typography>
+          </div>
+        );
+      }
+
+      return (
+        <TableContainer component={Paper} sx={{ boxShadow: 'none' }}>
+          <Table stickyHeader size="small">
+            <TableHead>
+              <TableRow>
+                {columns.map(col => (
+                  <TableCell key={col} sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>
+                    {col}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {records.map((row, idx) => (
+                <TableRow key={idx} hover>
+                  {columns.map(col => (
+                    <TableCell key={col}>
+                      {String(row[col] ?? '')}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<CustomTableApp />);
+  </script>
+</body>
+</html>
